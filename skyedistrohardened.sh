@@ -29,16 +29,16 @@ sudo bash bin/hardening.sh --set-hardening-level 1 --apply
 cd ..
 cd /usr/src/
 # Get the latest stable kernel version number straight from kernel.org
-LATEST=$(wget -qO- https://kernel.org | grep 'latest_link' -A1 | tail -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+#LATEST=$(wget -qO- https://kernel.org | grep 'latest_link' -A1 | tail -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
 
-# Download the latest .tar.xz
-sudo wget https://cdn.kernel.org/pub/linux/kernel/v${LATEST:0:1}.x/linux-${LATEST}.tar.xz
+# Download the latest .tar.xz put whatever latest kernel here until I feel like doing bash for this stuff
+sudo wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz
 
 # Extract it (xvpf preserves permissions and shows files as they extract)
-sudo tar xvpf linux-${LATEST}.tar.xz
+sudo tar xvpf linux-6.17.8.tar.xz
 
 # Jump right into the new directory
-cd linux-${LATEST}
+cd linux-6.17.8
 
 wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/.config
 grep -q 'O2' Makefile && sed -i 's/-O2/-O3/g' Makefile
