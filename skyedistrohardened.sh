@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hardened Debian 13 (Trixie) setup - fixed & automated with optional NVIDIA
+# Hardened Debian 13 (Trixie) setup - fixed & automated with optional NVIDIA + CIS version fix
 # Run as normal user with sudo privileges
 
 set -e  # Exit immediately on any error
@@ -31,7 +31,7 @@ sudo apt -y install librewolf
 sudo apt -y purge firefox-esr || true
 sudo apt -y autoremove
 
-# ---- OVH debian-cis hardening ----
+# ---- OVH debian-cis hardening (with explicit Debian 12 version for compatibility) ----
 git clone https://github.com/ovh/debian-cis.git
 cd debian-cis
 CIS_DIR="$(/bin/pwd)"  # Absolute path
@@ -43,6 +43,8 @@ sudo sed -i "s#CIS_CHECKS_DIR=.*#CIS_CHECKS_DIR='$CIS_DIR/bin/hardening'#g" /etc
 sudo sed -i "s#CIS_CONF_DIR=.*#CIS_CONF_DIR='$CIS_DIR/etc'#g"     /etc/default/cis-hardening
 sudo sed -i "s#CIS_TMP_DIR=.*#CIS_TMP_DIR='$CIS_DIR/tmp'#g"       /etc/default/cis-hardening
 
+# Explicitly set to Debian 12 profile (closest supported; applies to 13 with minor skips)
+sudo ./bin/hardening.sh --set-version debian12_x86_64
 sudo ./bin/hardening.sh --audit-all
 sudo ./bin/hardening.sh --apply --set-hardening-level 1
 cd ..
