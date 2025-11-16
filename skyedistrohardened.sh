@@ -50,6 +50,7 @@ sudo make install
 #sudo echo 'deb [signed-by=/usr/share/keyrings/nvidia-drivers.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/ /' | sudo tee /etc/apt/sources.list.d/nvidia-drivers.list
 #sudo apt install nvidia-driver cuda nvidia-smi nvidia-settings
 #cd ~
+#$SHELL
 #wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/cuda_glibc_241_compat.diff
 #sudo pushd /usr/local/cuda/include/crt
 #sudo patch < ~/cuda_glibc_241_compat.diff
