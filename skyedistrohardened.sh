@@ -2,8 +2,9 @@
 #This script will harden a debian 13 install. Will try to comment as we go. The only thing this script cannot do is pre-install extensions for the browser.
 #A list of browser extensions to install will be given
 #clearurls ublock origin decentraleyes dark reader (makes everything dark for reading personal prefrence)
-sudo apt-get -y install software-properties-common
-sudo add-apt-repository contrib non-free-firmware
+
+# Add contrib non-free non-free-firmware
+sudo sed -i '/^deb .* \(bookworm\|trixie\|sid\)/ s/main$/main contrib non-free non-free-firmware/' "$SOURCES"
 sudo apt-get update
 sudo apt-get -y upgrade
 #installs nessecary packages for: stable diffusion to start, pull from git, kernel compile tools for things
