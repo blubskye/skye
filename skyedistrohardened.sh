@@ -52,9 +52,9 @@ sudo make install
 #sudo apt install nvidia-driver cuda nvidia-smi nvidia-settings
 #cd ~
 #wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/cuda_glibc_241_compat.diff
-#pushd /usr/local/cuda/include/crt
-#patch < ~/cuda_glibc_241_compat.diff
-#popd
+#sudo pushd /usr/local/cuda/include/crt
+#sudo patch < ~/cuda_glibc_241_compat.diff
+#sudo popd
 ## Source - https://stackoverflow.com/a
 # Posted by einpoklum, modified by community. See post 'Timeline' for change history
 # Retrieved 2025-11-16, License - CC BY-SA 4.0
