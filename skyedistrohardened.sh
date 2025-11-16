@@ -40,8 +40,8 @@ sudo tar xvpf linux-6.17.8.tar.xz
 # Jump right into the new directory
 cd linux-6.17.8
 
-wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/.config
-grep -q 'O2' Makefile && sed -i 's/-O2/-O3/g' Makefile
+sudo wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/.config
+sudo grep -q 'O2' Makefile && sed -i 's/-O2/-O3/g' Makefile
 sudo make -j$(($(nproc) + 1))
 sudo make make -j$(($(nproc) + 1)) modules_install
 sudo make install
