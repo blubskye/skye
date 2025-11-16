@@ -16,9 +16,8 @@ sudo extrepo enable librewolf
 sudo apt update && sudo apt -y install librewolf vlc
 sudo apt-get -y remove firefox
 git clone https://github.com/ovh/debian-cis.git
-cd debian-cis.git
-sudo cp debian/default /etc/default/cis-hardening
-sudo git clone https://github.com/ovh/debian-cis.git && cd debian-cis
+cd debian-cis
+$SHELL
 sudo cp debian/default /etc/default/cis-hardening
 sudo sed -i "s#CIS_LIB_DIR=.*#CIS_LIB_DIR='sudo(pwd)'/lib#" /etc/default/cis-hardening
 sudo sed -i "s#CIS_CHECKS_DIR=.*#CIS_CHECKS_DIR='sudo(pwd)'/bin/hardening#" /etc/default/cis-hardening
@@ -26,8 +25,8 @@ sudo sed -i "s#CIS_CONF_DIR=.*#CIS_CONF_DIR='sudo(pwd)'/etc#" /etc/default/cis-h
 sudo sed -i "s#CIS_TMP_DIR=.*#CIS_TMP_DIR='sudo(pwd)'/tmp#" /etc/default/cis-hardening
 sudo bash bin/hardening.sh --set-hardening-level 1 --audit
 sudo bash bin/hardening.sh --set-hardening-level 1 --apply
-cd ..
 cd /usr/src/
+$SHELL
 # Get the latest stable kernel version number straight from kernel.org
 #LATEST=$(wget -qO- https://kernel.org | grep 'latest_link' -A1 | tail -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
 
@@ -39,7 +38,7 @@ sudo tar xvpf linux-6.17.8.tar.xz
 
 # Jump right into the new directory
 cd linux-6.17.8
-
+$SHELL
 sudo wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/.config
 sudo grep -q 'O2' Makefile && sed -i 's/-O2/-O3/g' Makefile
 sudo make -j$(($(nproc) + 1))
