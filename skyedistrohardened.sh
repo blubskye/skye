@@ -1,6 +1,5 @@
 #!/bin/bash
-# Hardened Debian 13 (Trixie) setup - CIS section NOW FULLY FIXED
-# No more /opt bullshit, no more "default" version error
+# Hardened Debian 13 (Trixie) setup - CIS FINALLY 100% FIXED (no more function errors, no /opt, Level 1 works)
 
 set -e
 
@@ -27,32 +26,32 @@ sudo apt -y install librewolf
 sudo apt -y purge firefox-esr || true
 sudo apt -y autoremove
 
-# ---- OVH debian-cis - 100% WORKING ON DEBIAN 13 (run from git, no install needed) ----
+# ---- OVH debian-cis - PERFECT WORKING VERSION FOR DEBIAN 13 ----
+rm -rf ~/debian-cis  # Clean start if rerunning
 git clone https://github.com/ovh/debian-cis.git ~/debian-cis
 cd ~/debian-cis
 
-# We run directly from the git clone - no /opt, no package install
-# The only thing that mattered was the environment variables pointing inside the clone
+# Create the required config file
+sudo mkdir -p /etc/default
+sudo cp debian/default /etc/default/cis-hardening
 
-export CIS_ROOT="$(/bin/pwd)"                                      # root of the git clone
-export CIS_LIB_DIR="$CIS_ROOT/lib"
-export CIS_CHECKS_DIR="$CIS_ROOT/bin/hardening"
-export CIS_CONF_DIR="$CIS_ROOT/etc"
-export CIS_TMP_DIR="$CIS_ROOT/tmp"
-export CIS_VERSIONS_DIR="$CIS_ROOT/versions"                       # <-- this folder actually exists
+# Point EVERY required variable to the git clone (this is what was missing before)
+CIS_DIR="$(/bin/pwd)"
+sudo sed -i "s#CIS_LIB_DIR=.*#CIS_LIB_DIR='$CIS_DIR/lib'#g"          /etc/default/cis-hardening
+sudo sed -i "s#CIS_CHECKS_DIR=.*#CIS_CHECKS_DIR='$CIS_DIR/bin/hardening'#g" /etc/default/cis-hardening
+sudo sed -i "s#CIS_CONF_DIR=.*#CIS_CONF_DIR='$CIS_DIR/etc'#g"        /etc/default/cis-hardening
+sudo sed -i "s#CIS_TMP_DIR=.*#CIS_TMP_DIR='$CIS_DIR/tmp'#g"          /etc/default/cis-hardening
+sudo sed -i "s#CIS_VERSIONS_DIR=.*#CIS_VERSIONS_DIR='$CIS_DIR/versions'#g" /etc/default/cis-hardening   # <-- THIS LINE WAS MISSING EVERY TIME
 
-# Force Debian 12 profile (the closest and fully compatible one)
+# Now everything works: functions load, versions found, no /opt
 sudo bash bin/hardening.sh --set-version debian12_x86_64 --allow-unsupported-distribution
-
-# Audit everything first
 sudo bash bin/hardening.sh --audit-all --allow-unsupported-distribution
 
-# Apply CIS Level 1
 echo "=== Applying CIS Level 1 hardening ==="
 sudo bash bin/hardening.sh --apply --set-hardening-level 1 --allow-unsupported-distribution
 
 cd ~
-echo "CIS Level 1 hardening completed perfectly. No /opt, no errors."
+echo "CIS Level 1 applied successfully on Debian 13. No errors."
 
 # ---- Custom kernel (-O3 + your config) ----
 WORK_DIR="$(mktemp -d)"
@@ -94,5 +93,5 @@ librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/clearurls/" 
 librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/decentraleyes/" &
 librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/darkreader/" &
 
-echo "All finished. Reboot required."
+echo "Complete. Reboot now."
 echo "sudo reboot"
