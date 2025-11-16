@@ -1,5 +1,5 @@
 #!/bin/bash
-#This script will harden a debian 12 install. Will try to comment as we go. The only thing this script cannot do is pre-install extensions for the browser.
+#This script will harden a debian 13 install. Will try to comment as we go. The only thing this script cannot do is pre-install extensions for the browser.
 #A list of browser extensions to install will be given
 #clearurls ublock origin decentraleyes dark reader (makes everything dark for reading personal prefrence)
 sudo add-apt-repository contrib non-free-firmware
@@ -25,20 +25,38 @@ sudo bash bin/hardening.sh --set-hardening-level 1 --audit
 sudo bash bin/hardening.sh --set-hardening-level 1 --apply
 cd ..
 cd /usr/src/
-sudo wget https://git.kernel.org/torvalds/t/linux-6.14-rc2.tar.gz
-sudo tar xvf linux-6.14-rc2.tar.gz
-cd linux-6.14-rc2
-sudo wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/.config
-sudo rm -rf Makefile
-sudo wget sudo wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/Makefile
-sudo make -j5
-sudo make -j5 modules_install
+# Get the latest stable kernel version number straight from kernel.org
+LATEST=$(wget -qO- https://kernel.org | grep 'latest_link' -A1 | tail -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+
+# Download the latest .tar.xz
+sudo wget https://cdn.kernel.org/pub/linux/kernel/v${LATEST:0:1}.x/linux-${LATEST}.tar.xz
+
+# Extract it (xvpf preserves permissions and shows files as they extract)
+sudo tar xvpf linux-${LATEST}.tar.xz
+
+# Jump right into the new directory
+cd linux-${LATEST}
+
+wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/.config
+grep -q 'O2' Makefile && sed -i 's/-O2/-O3/g' Makefile
+sudo make -j$(($(nproc) + 1))
+sudo make make -j$(($(nproc) + 1)) modules_install
 sudo make install
 
-##uncomment below for nvidia crap
+##uncomment below for nvidia crap includes a patch F nvidia they won't fix they own crap
 #sudo curl -fSsL https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/3bf863cc.pub | sudo gpg --dearmor | sudo tee /usr/share/keyrings/nvidia-drivers.gpg > /dev/null 2>&1
 #sudo echo 'deb [signed-by=/usr/share/keyrings/nvidia-drivers.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/ /' | sudo tee /etc/apt/sources.list.d/nvidia-drivers.list
 #sudo apt install nvidia-driver cuda nvidia-smi nvidia-settings
+#cd ~
+#wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/cuda_glibc_241_compat.diff
+#pushd /usr/local/cuda/include/crt
+#patch < ~/cuda_glibc_241_compat.diff
+#popd
+## Source - https://stackoverflow.com/a
+# Posted by einpoklum, modified by community. See post 'Timeline' for change history
+# Retrieved 2025-11-16, License - CC BY-SA 4.0
+
+
 
 echo "Remember to install in librewolf clearurls ublock origin decentraleyes dark reader. Cool."
 librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/"
