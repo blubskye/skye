@@ -1,70 +1,102 @@
 #!/bin/bash
-#This script will harden a debian 13 install. Will try to comment as we go. The only thing this script cannot do is pre-install extensions for the browser.
-#A list of browser extensions to install will be given
-#clearurls ublock origin decentraleyes dark reader (makes everything dark for reading personal prefrence)
+# Hardened Debian 13 (Trixie) setup - fixed & automated with optional NVIDIA
+# Run as normal user with sudo privileges
 
-# Add contrib non-free non-free-firmware
-sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
-sudo sed -i 's/main$/main contrib non-free non-free-firmware/g' /etc/apt/sources.list && \
+set -e  # Exit immediately on any error
+
+# ---- Prompt for NVIDIA ----
+echo "Do you want to install NVIDIA drivers + CUDA (using debian12 repo) and apply glibc 2.41 patch? (y/n)"
+read -r NVIDIA_CHOICE
+if [[ "$NVIDIA_CHOICE" =~ ^[Yy]$ ]]; then
+    INSTALL_NVIDIA=1
+else
+    INSTALL_NVIDIA=0
+fi
+
+# ---- APT sources + upgrade ----
+sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
+sudo sed -i 's/main$/main contrib non-free non-free-firmware/g' /etc/apt/sources.list
 sudo apt update
-sudo apt-get -y upgrade
-#installs nessecary packages for: stable diffusion to start, pull from git, kernel compile tools for things
-sudo apt-get -y install git build-essential libncurses5-dev zlib1g-dev curl virtualenv python3-virtualenv dkms extrepo install dirmngr ca-certificates  apt-transport-https dkms okular python3-venv
-python3 -m venv venv
-sudo apt-get -y build-dep linux
+sudo apt -y full-upgrade
+
+# ---- Core tools ----
+sudo apt -y install git build-essential curl python3-venv dkms extrepo \
+                   dirmngr ca-certificates apt-transport-https okular vlc \
+                   wget xz-utils gnupg2
+
+# ---- LibreWolf (replaces Firefox) ----
 sudo extrepo enable librewolf
-sudo apt update && sudo apt -y install librewolf vlc
-sudo apt-get -y remove firefox
+sudo apt update
+sudo apt -y install librewolf
+sudo apt -y purge firefox-esr || true
+sudo apt -y autoremove
+
+# ---- OVH debian-cis hardening ----
 git clone https://github.com/ovh/debian-cis.git
 cd debian-cis
-$SHELL
+CIS_DIR="$(/bin/pwd)"  # Absolute path
+
 sudo cp debian/default /etc/default/cis-hardening
-sudo sed -i "s#CIS_LIB_DIR=.*#CIS_LIB_DIR='sudo(pwd)'/lib#" /etc/default/cis-hardening
-sudo sed -i "s#CIS_CHECKS_DIR=.*#CIS_CHECKS_DIR='sudo(pwd)'/bin/hardening#" /etc/default/cis-hardening
-sudo sed -i "s#CIS_CONF_DIR=.*#CIS_CONF_DIR='sudo(pwd)'/etc#" /etc/default/cis-hardening
-sudo sed -i "s#CIS_TMP_DIR=.*#CIS_TMP_DIR='sudo(pwd)'/tmp#" /etc/default/cis-hardening
-sudo bash bin/hardening.sh --set-hardening-level 1 --audit
-sudo bash bin/hardening.sh --set-hardening-level 1 --apply
-cd /usr/src/
-$SHELL
-# Get the latest stable kernel version number straight from kernel.org
-#LATEST=$(wget -qO- https://kernel.org | grep 'latest_link' -A1 | tail -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
 
-# Download the latest .tar.xz put whatever latest kernel here until I feel like doing bash for this stuff
-sudo wget https://cdn.kernel.org/pub/linux/kernel/v6.x/linux-6.17.8.tar.xz
+sudo sed -i "s#CIS_LIB_DIR=.*#CIS_LIB_DIR='$CIS_DIR/lib'#g"       /etc/default/cis-hardening
+sudo sed -i "s#CIS_CHECKS_DIR=.*#CIS_CHECKS_DIR='$CIS_DIR/bin/hardening'#g" /etc/default/cis-hardening
+sudo sed -i "s#CIS_CONF_DIR=.*#CIS_CONF_DIR='$CIS_DIR/etc'#g"     /etc/default/cis-hardening
+sudo sed -i "s#CIS_TMP_DIR=.*#CIS_TMP_DIR='$CIS_DIR/tmp'#g"       /etc/default/cis-hardening
 
-# Extract it (xvpf preserves permissions and shows files as they extract)
-sudo tar xvpf linux-6.17.8.tar.xz
+sudo ./bin/hardening.sh --audit-all
+sudo ./bin/hardening.sh --apply --set-hardening-level 1
+cd ..
 
-# Jump right into the new directory
-cd linux-6.17.8
-$SHELL
-sudo wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/.config
-sudo grep -q 'O2' Makefile && sed -i 's/-O2/-O3/g' Makefile
-sudo make -j$(($(nproc) + 1))
-sudo make make -j$(($(nproc) + 1)) modules_install
+# ---- Custom latest stable kernel (-O3, your .config) ----
+WORK_DIR="$(mktemp -d)"
+cd "$WORK_DIR"
+
+# Fetch latest stable version automatically
+LATEST=$(wget -qO- https://www.kernel.org/ | grep -A1 'latest_link' | tail -n1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+
+wget "https://cdn.kernel.org/pub/linux/kernel/v${LATEST%%.*}.x/linux-$LATEST.tar.xz"
+tar xf "linux-$LATEST.tar.xz"
+cd "linux-$LATEST"
+
+# Your personal config
+wget -O .config https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/.config
+
+# -O3 instead of -O2
+sed -i 's/-O2/-O3/g' Makefile
+
+# Build
+make -j$(nproc --all)
+sudo make modules_install
 sudo make install
 
-##uncomment below for nvidia crap includes a patch F nvidia they won't fix they own crap
-#sudo curl -fSsL https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/3bf863cc.pub | sudo gpg --dearmor | sudo tee /usr/share/keyrings/nvidia-drivers.gpg > /dev/null 2>&1
-#sudo echo 'deb [signed-by=/usr/share/keyrings/nvidia-drivers.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/ /' | sudo tee /etc/apt/sources.list.d/nvidia-drivers.list
-#sudo apt install nvidia-driver cuda nvidia-smi nvidia-settings
-#cd ~
-#$SHELL
-#wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/cuda_glibc_241_compat.diff
-#sudo pushd /usr/local/cuda/include/crt
-#sudo patch < ~/cuda_glibc_241_compat.diff
-#sudo popd
-## Source - https://stackoverflow.com/a
-# Posted by einpoklum, modified by community. See post 'Timeline' for change history
-# Retrieved 2025-11-16, License - CC BY-SA 4.0
+# Update grub
+sudo update-grub
 
+# ---- Optional NVIDIA + CUDA ----
+if [ "$INSTALL_NVIDIA" -eq 1 ]; then
+    sudo curl -fSsL https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/3bf863cc.pub | \
+        sudo gpg --dearmor -o /usr/share/keyrings/nvidia-drivers.gpg
 
+    echo 'deb [signed-by=/usr/share/keyrings/nvidia-drivers.gpg] https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/ /' | \
+        sudo tee /etc/apt/sources.list.d/nvidia-drivers.list
 
-echo "Remember to install in librewolf clearurls ublock origin decentraleyes dark reader. Cool."
-librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/"
-librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/decentraleyes/"
-librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/darkreader/"
-librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/clearurls/"
+    sudo apt update
+    sudo apt -y install nvidia-driver cuda nvidia-smi nvidia-settings
 
-echo "Full reboot required for all changes to take effect recommended"
+    # glibc compatibility patch
+    cd "$WORK_DIR"  # Reuse temp dir for download
+    wget https://raw.githubusercontent.com/blubskye/skye/refs/heads/main/cuda_glibc_241_compat.diff
+    sudo patch /usr/local/cuda/include/crt/host_config.h < cuda_glibc_241_compat.diff
+fi
+
+# ---- Browser extensions reminder ----
+echo "Install these in LibreWolf:"
+echo "uBlock Origin, ClearURLs, Decentraleyes, Dark Reader"
+
+librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/ublock-origin/" &
+librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/clearurls/" &
+librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/decentraleyes/" &
+librewolf --new-tab "https://addons.mozilla.org/en-US/firefox/addon/darkreader/" &
+
+echo "All done. Reboot now for kernel changes (and NVIDIA if installed)."
+echo "sudo reboot"
