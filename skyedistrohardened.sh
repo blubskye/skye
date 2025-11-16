@@ -4,8 +4,9 @@
 #clearurls ublock origin decentraleyes dark reader (makes everything dark for reading personal prefrence)
 
 # Add contrib non-free non-free-firmware
-sudo sed -i '/^deb .* \(bookworm\|trixie\|sid\)/ s/main$/main contrib non-free non-free-firmware/' "$SOURCES"
-sudo apt-get update
+sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak && \
+sudo sed -i 's/main$/main contrib non-free non-free-firmware/g' /etc/apt/sources.list && \
+sudo apt update
 sudo apt-get -y upgrade
 #installs nessecary packages for: stable diffusion to start, pull from git, kernel compile tools for things
 sudo apt-get -y install git build-essential libncurses5-dev zlib1g-dev curl virtualenv python3-virtualenv dkms extrepo nstall dirmngr ca-certificates software-properties-common apt-transport-https dkms okular
